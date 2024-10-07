@@ -8,18 +8,20 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
       <button id="draw-line">Draw Line</button>
       <button id="draw-rectangle">Draw Rectangle</button>
       <button id="draw-circle">Draw Circle</button>
-      <button id="move">Move</button>
+      <button id="move">Move / Select</button>
       <button id="resize">Resize</button>
       <input type="file" id="load" />
       <button id="save">Save</button>
-      <div>
-        <label>Parameters (x1, y1, x2, y2 for Line, x, y, width, height for Rectangle, x, y, radius for Circle):</label>
+      <div class="inputs">
+        <label>Parameters: </br> Line - x1, y1, x2, y2,</br> Rectangle - x, y, width, height,</br> Circle - x, y, radius</label>
         <input type="text" id="params" />
-        <button id="set-params">Set Parameters</button>
+        <button id="modify">Modify current</button>
+        <button id="create">Create</button>
       </div>
     </div>
-    <div>
+    <div style="display:flex; flex-direction:column; gap:2rem">
       <canvas id="canvas" width="800" height="600"></canvas>
+      <button id="clear">Clear</button> 
     </div>
   </div>
 `;
@@ -28,36 +30,24 @@ const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 const drawingApp = new DrawingApp(canvas);
 
 const activateButton = (buttonId: string) => {
-    const buttons = document.querySelectorAll('.sidebar button');
-    buttons.forEach(button => {
+    document.querySelectorAll('.sidebar button').forEach(button => {
         button.classList.remove('active');
     });
     document.getElementById(buttonId)?.classList.add('active');
 };
 
-document.getElementById('draw-line')!.addEventListener('click', () => {
-    drawingApp.setShapeType('line');
-    activateButton('draw-line');
+['line', 'rectangle', 'circle'].forEach(shape => {
+    document.getElementById(`draw-${shape}`)!.addEventListener('click', () => {
+        drawingApp.setShapeType(shape as 'line' | 'rectangle' | 'circle');
+        activateButton(`draw-${shape}`);
+    });
 });
 
-document.getElementById('draw-rectangle')!.addEventListener('click', () => {
-    drawingApp.setShapeType('rectangle');
-    activateButton('draw-rectangle');
-});
-
-document.getElementById('draw-circle')!.addEventListener('click', () => {
-    drawingApp.setShapeType('circle');
-    activateButton('draw-circle');
-});
-
-document.getElementById('move')!.addEventListener('click', () => {
-    drawingApp.setMode('move');
-    activateButton('move');
-});
-
-document.getElementById('resize')!.addEventListener('click', () => {
-    drawingApp.setMode('resize');
-    activateButton('resize');
+['move', 'resize'].forEach(mode => {
+    document.getElementById(mode)!?.addEventListener('click', () => {
+        drawingApp.setMode(mode as 'move' | 'resize');
+        activateButton(mode);
+    });
 });
 
 document.getElementById('save')!.addEventListener('click', () => {
@@ -66,13 +56,10 @@ document.getElementById('save')!.addEventListener('click', () => {
 
 document.getElementById('load')!.addEventListener('change', (event) => {
     const file = (event.target as HTMLInputElement).files![0];
-    if (file) {
-        drawingApp.loadFromFile(file);
-    }
+    if (file) drawingApp.loadFromFile(file);
 });
 
-document.getElementById('set-params')!.addEventListener('click', () => {
-
+document.getElementById('modify')!.addEventListener('click', () => {
     const paramsInput = (document.getElementById('params') as HTMLInputElement).value.split(',').map(Number);
     const selectedShape = drawingApp.getSelectedShape();
 
@@ -81,28 +68,30 @@ document.getElementById('set-params')!.addEventListener('click', () => {
         return;
     }
 
-    if (selectedShape instanceof Line) {
-        if (paramsInput.length !== 4) {
-            alert('Please provide 4 parameters: x1, y1, x2, y2 for Line.');
-            return;
-        }
-        selectedShape.point1 = new Point(paramsInput[0], paramsInput[1]); 
-        selectedShape.point2 = new Point(paramsInput[2], paramsInput[3]); 
-    } else if (selectedShape instanceof Rectangle) {
-        if (paramsInput.length !== 4) {
-            alert('Please provide 4 parameters: x, y, width, height for Rectangle.');
-            return;
-        }
-        selectedShape.point1 = new Point(paramsInput[0], paramsInput[1]); 
-        selectedShape.point2 = new Point(paramsInput[0] + paramsInput[2], paramsInput[1] + paramsInput[3]); 
-    } else if (selectedShape instanceof Circle) {
-        if (paramsInput.length !== 3) {
-            alert('Please provide 3 parameters: x, y, radius for Circle.');
-            return;
-        }
-        selectedShape.center = new Point(paramsInput[0], paramsInput[1]); 
-        selectedShape.radius = paramsInput[2]; 
+    if (selectedShape instanceof Line && paramsInput.length === 4) {
+        selectedShape.point1 = new Point(paramsInput[0], paramsInput[1]);
+        selectedShape.point2 = new Point(paramsInput[2], paramsInput[3]);
+    } else if (selectedShape instanceof Rectangle && paramsInput.length === 4) {
+        selectedShape.point1 = new Point(paramsInput[0], paramsInput[1]);
+        selectedShape.point2 = new Point(paramsInput[0] + paramsInput[2], paramsInput[1] + paramsInput[3]);
+    } else if (selectedShape instanceof Circle && paramsInput.length === 3) {
+        selectedShape.center = new Point(paramsInput[0], paramsInput[1]);
+        selectedShape.radius = paramsInput[2];
+    } else {
+        alert(`Please provide correct parameters for ${selectedShape.getType()}.`);
+        return;
     }
 
-    drawingApp.draw(); 
+    drawingApp.draw();
+});
+
+document.getElementById('create')!.addEventListener('click', () => {
+    const paramsInput = (document.getElementById('params') as HTMLInputElement).value.split(',').map(Number);
+    drawingApp.createShapeFromInput(paramsInput);
+});
+
+
+document.getElementById('clear')!.addEventListener('click', () => {
+  drawingApp.clearShapes(); 
+  activateButton('clear'); 
 });

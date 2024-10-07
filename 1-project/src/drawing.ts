@@ -1,18 +1,16 @@
 import { Circle, Line, Point, Rectangle } from './shapes';
 
 export class DrawingApp {
-    private canvas: HTMLCanvasElement;
     private ctx: CanvasRenderingContext2D;
     private shapes: (Line | Rectangle | Circle)[] = [];
     private currentShape: Line | Rectangle | Circle | null = null;
-    private isDragging: boolean = false;
+    private isDragging = false;
     private selectedShape: Line | Rectangle | Circle | null = null;
     private startPoint: Point | null = null;
     private shapeType: 'line' | 'rectangle' | 'circle' = 'line';
     private mode: 'draw' | 'move' | 'resize' = 'draw';
 
-    constructor(canvas: HTMLCanvasElement) {
-        this.canvas = canvas;
+    constructor(private canvas: HTMLCanvasElement) {
         this.ctx = canvas.getContext('2d')!;
         this.canvas.addEventListener('mousedown', this.onMouseDown.bind(this));
         this.canvas.addEventListener('mousemove', this.onMouseMove.bind(this));
@@ -29,85 +27,61 @@ export class DrawingApp {
         return this.selectedShape;
     }
 
-    public getShapeType() {
-        return this.shapeType;
-    }
-
     public setMode(mode: 'move' | 'resize') {
         this.mode = mode;
     }
 
     public draw() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        for (const shape of this.shapes) {
-            shape.draw(this.ctx);
-        }
-        if (this.currentShape) {
-            this.currentShape.draw(this.ctx);
-        }
+        this.shapes.forEach(shape => shape.draw(this.ctx));
+        this.currentShape?.draw(this.ctx);
     }
 
     private onMouseDown(event: MouseEvent) {
-        const rect = this.canvas.getBoundingClientRect();
-        const point: Point = new Point(
-            event.clientX - rect.left,
-            event.clientY - rect.top,
-        );
-
+        const point = this.getMousePosition(event);
         if (this.mode === 'move' || this.mode === 'resize') {
             this.selectedShape = this.shapes.find(shape => shape.contains(point)) || null;
             if (this.selectedShape) {
                 this.isDragging = true;
                 this.startPoint = point;
             }
-            return;
+        } else {
+            this.createShape(point);
         }
-
-        this.createShape(point);
     }
 
     private createShape(point: Point) {
         if (this.shapeType === 'line') {
-            this.currentShape = new Line(Date.now(), point, point);  
+            this.currentShape = new Line(Date.now(), point, point);
         } else if (this.shapeType === 'rectangle') {
-            this.currentShape = new Rectangle(Date.now(), point, point);  
+            this.currentShape = new Rectangle(Date.now(), point, point);
         } else if (this.shapeType === 'circle') {
-            this.currentShape = new Circle(Date.now(), point, 0);  
+            this.currentShape = new Circle(Date.now(), point, 0);
         }
-    
         this.startPoint = point;
-        this.draw(); 
+        this.draw();
     }
-    
 
     private onMouseMove(event: MouseEvent) {
-        const rect = this.canvas.getBoundingClientRect();
-        const point: Point = new Point(
-            event.clientX - rect.left,
-            event.clientY - rect.top,
-        );
-
+        const point = this.getMousePosition(event);
         if (this.isDragging && this.selectedShape) {
             this.handleDragging(point);
-            return;
+        } else if (this.currentShape) {
+            this.updateCurrentShape(point);
+            this.draw();
         }
-
-        if (!this.currentShape) return;
-
-        this.updateCurrentShape(point);
-        this.draw();
     }
 
     private handleDragging(point: Point) {
         const dx = point.x - this.startPoint!.x;
         const dy = point.y - this.startPoint!.y;
-    
+
         if (this.mode === 'move') {
             this.moveShape(dx, dy);
         } else if (this.mode === 'resize') {
             this.resizeShape(dx, dy);
         }
-    
+
         this.startPoint = point;
         this.draw();
     }
@@ -116,15 +90,12 @@ export class DrawingApp {
         if (this.selectedShape instanceof Circle) {
             this.selectedShape.center.x += dx;
             this.selectedShape.center.y += dy;
-        }else{
-            if (this.selectedShape instanceof Rectangle ||this.selectedShape instanceof Line ) {
-                this.selectedShape.point1.x += dx;
-                this.selectedShape.point1.y += dy;
-                this.selectedShape.point2.x += dx;
-                this.selectedShape.point2.y += dy;
-       
+        } else if (this.selectedShape instanceof Rectangle || this.selectedShape instanceof Line) {
+            this.selectedShape.point1.x += dx;
+            this.selectedShape.point1.y += dy;
+            this.selectedShape.point2.x += dx;
+            this.selectedShape.point2.y += dy;
         }
-    }
     }
 
     private resizeShape(dx: number, dy: number) {
@@ -132,42 +103,34 @@ export class DrawingApp {
             this.selectedShape.point2.x += dx;
             this.selectedShape.point2.y += dy;
         } else if (this.selectedShape instanceof Circle) {
-          
             this.selectedShape.radius = Math.abs(this.selectedShape.radius + dx);
         } else if (this.selectedShape instanceof Line) {
-            this.selectedShape.point2.x += dx; 
-            this.selectedShape.point2.y += dy; 
+            this.selectedShape.point2.x += dx;
+            this.selectedShape.point2.y += dy;
         }
     }
 
     private updateCurrentShape(point: Point) {
         if (this.currentShape instanceof Line) {
-            this.currentShape.point1 = point;  
+            this.currentShape.point2 = point;
         } else if (this.currentShape instanceof Rectangle) {
-            this.currentShape.point2 = point;  
+            this.currentShape.point2 = point;
         } else if (this.currentShape instanceof Circle) {
-            this.currentShape.radius = Point.distance(this.currentShape.center, point);  
+            this.currentShape.radius = Point.distance(this.currentShape.center, point);
         }
     }
-
 
     private onMouseUp() {
         this.isDragging = false;
-
         if (this.currentShape) {
             this.shapes.push(this.currentShape);
-            this.currentShape = null;  
+            this.currentShape = null;
         }
-        this.draw();  
+        this.draw();
     }
 
     private onDoubleClick(event: MouseEvent) {
-        const rect = this.canvas.getBoundingClientRect();
-        const point: Point = new Point(
-            event.clientX - rect.left,
-            event.clientY - rect.top,
-        );
-
+        const point = this.getMousePosition(event);
         this.selectedShape = this.shapes.find(shape => shape.contains(point)) || null;
         this.draw();
     }
@@ -189,7 +152,7 @@ export class DrawingApp {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'drawing.json';
+        a.download = Date.now()+'_draw.json';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -214,4 +177,34 @@ export class DrawingApp {
         };
         reader.readAsText(file);
     }
+
+    private getMousePosition(event: MouseEvent): Point {
+        const rect = this.canvas.getBoundingClientRect();
+        return new Point(event.clientX - rect.left, event.clientY - rect.top);
+    }
+
+    public createShapeFromInput(paramsInput: number[]) {
+        if (this.shapeType === 'line' && paramsInput.length === 4) {
+            const shape = new Line(Date.now(), new Point(paramsInput[0], paramsInput[1]), new Point(paramsInput[2], paramsInput[3]));
+            this.shapes.push(shape);
+        } else if (this.shapeType === 'rectangle' && paramsInput.length === 4) {
+            const shape = new Rectangle(Date.now(), new Point(paramsInput[0], paramsInput[1]), new Point(paramsInput[0] + paramsInput[2], paramsInput[1] + paramsInput[3]));
+            this.shapes.push(shape);
+        } else if (this.shapeType === 'circle' && paramsInput.length === 3) {
+            const shape = new Circle(Date.now(), new Point(paramsInput[0], paramsInput[1]), paramsInput[2]);
+            this.shapes.push(shape);
+        } else {
+            alert(`Please provide correct parameters for ${this.shapeType}.`);
+            return;
+        }
+        this.draw();
+    }
+
+    public clearShapes() {
+        this.shapes = []; 
+        this.currentShape = null; 
+        this.selectedShape = null; 
+        this.draw(); 
+    }
+    
 }

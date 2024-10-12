@@ -6,6 +6,7 @@ export class DrawingApp {
     private currentShape: Line | Rectangle | Circle | null = null;
     private isDragging = false;
     private selectedShape: Line | Rectangle | Circle | null = null;
+    private resizePoint: Point | null = null; 
     private startPoint: Point | null = null;
     private shapeType: 'line' | 'rectangle' | 'circle' = 'line';
     private mode: 'draw' | 'move' | 'resize' = 'draw';
@@ -33,17 +34,38 @@ export class DrawingApp {
 
     public draw() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.shapes.forEach(shape => shape.draw(this.ctx));
-        this.currentShape?.draw(this.ctx);
+        
+        this.shapes.forEach(shape => {
+            if (shape === this.selectedShape) {
+                this.ctx.strokeStyle = 'red';  
+            } else {
+                this.ctx.strokeStyle = 'black';  
+            }
+            shape.draw(this.ctx);
+        });
+    
+        if (this.currentShape) {
+            this.ctx.strokeStyle = 'black';
+            this.currentShape.draw(this.ctx);
+            this.selectedShape = this.currentShape
+        }
     }
 
     private onMouseDown(event: MouseEvent) {
         const point = this.getMousePosition(event);
-        if (this.mode === 'move' || this.mode === 'resize') {
+    
+        if (this.mode === 'move') {
             this.selectedShape = this.shapes.find(shape => shape.contains(point)) || null;
             if (this.selectedShape) {
                 this.isDragging = true;
                 this.startPoint = point;
+            }
+        } else if (this.mode === 'resize') {
+            this.selectedShape = this.shapes.find(shape => shape.getResizePoint(point)) || null;
+            if (this.selectedShape) {
+                this.isDragging = true;
+                this.startPoint = point;
+                this.resizePoint = this.selectedShape.getResizePoint(point);
             }
         } else {
             this.createShape(point);
@@ -75,13 +97,13 @@ export class DrawingApp {
     private handleDragging(point: Point) {
         const dx = point.x - this.startPoint!.x;
         const dy = point.y - this.startPoint!.y;
-
+    
         if (this.mode === 'move') {
             this.moveShape(dx, dy);
-        } else if (this.mode === 'resize') {
-            this.resizeShape(dx, dy);
+        } else if (this.mode === 'resize' && this.resizePoint) {
+            this.resizeShape(point);
         }
-
+    
         this.startPoint = point;
         this.draw();
     }
@@ -98,15 +120,14 @@ export class DrawingApp {
         }
     }
 
-    private resizeShape(dx: number, dy: number) {
-        if (this.selectedShape instanceof Rectangle) {
-            this.selectedShape.point2.x += dx;
-            this.selectedShape.point2.y += dy;
+    private resizeShape(point: Point) {
+        if (this.selectedShape instanceof Line || this.selectedShape instanceof Rectangle) {
+            if (this.resizePoint) {
+                this.resizePoint.x = point.x;
+                this.resizePoint.y = point.y;
+            }
         } else if (this.selectedShape instanceof Circle) {
-            this.selectedShape.radius = Math.abs(this.selectedShape.radius + dx);
-        } else if (this.selectedShape instanceof Line) {
-            this.selectedShape.point2.x += dx;
-            this.selectedShape.point2.y += dy;
+            this.selectedShape.radius = Point.distance(this.selectedShape.center, point);
         }
     }
 
@@ -131,7 +152,7 @@ export class DrawingApp {
 
     private onDoubleClick(event: MouseEvent) {
         const point = this.getMousePosition(event);
-        this.selectedShape = this.shapes.find(shape => shape.contains(point)) || null;
+        this.selectedShape = this.shapes.find(shape => shape.getResizePoint(point)) || null;
         this.draw();
     }
 

@@ -1,5 +1,7 @@
 import * as jpeg from 'jpeg-js';
 
+export const jpegs = jpeg
+
 function convertMaxVal(value: number, maxVal: number) {
   if (maxVal > 255) {
     return Math.floor((value / maxVal) * 255);

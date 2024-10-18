@@ -93,7 +93,13 @@ button.active {
 
 #canvas {
   min-width: 1000px;
+  overflow: hidden;
   background-color: white;
+}
+
+canvas{
+  user-select: none;
+	touch-action: none;
 }
 
 .inputs {

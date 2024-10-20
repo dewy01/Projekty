@@ -22,22 +22,81 @@ export class FileHandler {
   private handlePPMFile(file: File) {
     const reader = new FileReader();
     reader.onload = (event) => {
-      const result = event.target?.result as string;
-      const fileType = result.split('\n')[0];
-      if (fileType === 'P3') {
-        this.parsePPM_P3(result);
-      } else if (fileType === 'P6') {
-        const binaryReader = new FileReader();
-        binaryReader.onload = (e) => {
-          const arrayBuffer = e.target?.result as ArrayBuffer;
-          this.parsePPM_P6(arrayBuffer);
-        };
-        binaryReader.readAsArrayBuffer(file);
+      const content = event.target?.result as string;
+      const magicNumber = this.getMagicNumber(content);
+      
+      if (magicNumber === 'P3') {
+        this.readPPM_P3(file);
+      } else if (magicNumber === 'P6') {
+        this.readPPM_P6(file);
       } else {
         alert('Unsupported PPM format!');
       }
     };
-    reader.readAsText(file);
+    reader.readAsText(file.slice(0, 100)); 
+  }
+
+  private readPPM_P3(file: File) {
+    let textBuffer = '';
+
+    const reader = new FileReader();
+    const chunkSize = 64 * 1024; 
+    let offset = 0;
+
+    reader.onload = (event) => {
+      const chunk = event.target?.result as string;
+      textBuffer += chunk; 
+
+      offset += chunkSize;
+      if (offset < file.size) {
+        readNextChunk();
+      } else {
+        this.parsePPM_P3(textBuffer);
+      }
+    };
+
+    function readNextChunk() {
+      const blob = file.slice(offset, offset + chunkSize);
+      reader.readAsText(blob);
+    }
+
+    readNextChunk(); 
+  }
+
+  private readPPM_P6(file: File) {
+    const binaryBuffer: Uint8Array[] = [];
+    const reader = new FileReader();
+    const chunkSize = 64 * 1024; 
+    let offset = 0;
+
+    reader.onload = (event) => {
+      const chunk = event.target?.result as ArrayBuffer;
+      binaryBuffer.push(new Uint8Array(chunk));
+
+      offset += chunkSize;
+      if (offset < file.size) {
+        readNextChunk();
+      } else {
+        const completeBuffer = new Uint8Array(binaryBuffer.reduce((acc, curr) => acc + curr.length, 0));
+        let position = 0;
+        for (const arr of binaryBuffer) {
+          completeBuffer.set(arr, position);
+          position += arr.length;
+        }
+        this.parsePPM_P6(completeBuffer.buffer);
+      }
+    };
+
+    function readNextChunk() {
+      const blob = file.slice(offset, offset + chunkSize);
+      reader.readAsArrayBuffer(blob); 
+    }
+
+    readNextChunk(); 
+  }
+
+  private getMagicNumber(buffer: string): string {
+    return buffer.split('\n')[0].trim();
   }
 
   private parsePPM_P3(data: string) {
@@ -50,10 +109,20 @@ export class FileHandler {
       }
     }
 
+    if (parsedData.length < 4) {
+      alert('Invalid P3 file: insufficient header data.');
+      return;
+    }
+
     const width = parseInt(parsedData[1], 10);
     const height = parseInt(parsedData[2], 10);
     const maxVal = parseInt(parsedData[3], 10);
     const pixelValues = parsedData.slice(4).map(Number);
+
+    if (pixelValues.length < width * height * 3) {
+      alert('Invalid P3 file: insufficient pixel data.');
+      return;
+    }
 
     const pixels: number[] = [];
     for (let i = 0; i < pixelValues.length; i++) {
@@ -67,58 +136,83 @@ export class FileHandler {
 
   private parsePPM_P6(buffer: ArrayBuffer) {
     const dataView = new DataView(buffer);
-    let offset = { value: 0 };
-    let magicNumber = '';
-    while (true) {
-      const char = String.fromCharCode(dataView.getUint8(offset.value));
-      offset.value++;
-      if (char === '\n') break;
-      magicNumber += char;
-    }
+    let offset = 0;
+
+    const magicNumber = this.readString(dataView, offset, 2);
+    offset += 2;
 
     if (magicNumber !== 'P6') {
       alert('Invalid PPM file! Expected P6 format.');
       return;
     }
 
-    this.clearP6Line(dataView, offset, buffer);
-    const headerParts: string[] = [];
+    let width = 0, height = 0, maxValue = 0;
+    let headerComplete = false;
 
-    while (headerParts.length < 3) {
-      let value = '';
-      let char;
-      while (offset.value < buffer.byteLength) {
-        char = String.fromCharCode(dataView.getUint8(offset.value));
-        if (char === ' ' || char === '\n') {
-          if (value.length > 0) {
-            headerParts.push(value.trim());
-            value = '';
-            if (char === '\n') break;
+    while (!headerComplete && offset < buffer.byteLength) {
+      let line = this.readLine(dataView, offset);
+      offset += line.length + 1;
+
+      line = this.removeComments(line);
+
+      const tokens = line.split(/\s+/).filter(Boolean);
+
+      for (const token of tokens) {
+        const value = parseInt(token, 10);
+        if (!isNaN(value)) {
+          if (width === 0) width = value;
+          else if (height === 0) height = value;
+          else if (maxValue === 0) {
+            maxValue = value;
+            headerComplete = true;
+            break;
           }
-          offset.value++;
-          this.clearP6Line(dataView, offset, buffer);
-        } else {
-          value += char;
-          offset.value++;
         }
       }
     }
 
-    const width = parseInt(headerParts[0], 10);
-    const height = parseInt(headerParts[1], 10);
-    const maxVal = parseInt(headerParts[2], 10);
-
-    const pixels: number[] = [];
-    for (let i = offset.value; i < buffer.byteLength; i += 3) {
-      if (i + 2 < buffer.byteLength) {
-        pixels.push(dataView.getUint8(i));
-        pixels.push(dataView.getUint8(i + 1));
-        pixels.push(dataView.getUint8(i + 2));
-      }
+    if (width <= 0 || height <= 0 || maxValue !== 255) {
+      alert('Invalid PPM file: invalid width, height, or max value.');
+      return;
     }
 
-    const convertedPixels = pixels.map(value => this.convertMaxVal(value, maxVal));
-    this.canvasHandler.drawImageFromPixels(convertedPixels, width, height);
+    const dataSize = width * height * 3;
+    if (buffer.byteLength - offset < dataSize) {
+      alert('Invalid PPM file: insufficient pixel data.');
+      return;
+    }
+
+    const allPixels = new Uint8Array(dataSize);
+
+    for (let i = 0; i < dataSize; i++) {
+      allPixels[i] = dataView.getUint8(offset + i);
+    }
+
+    this.canvasHandler.drawImageFromPixels([...allPixels], width, height);
+  }
+
+  private readLine(dataView: DataView, offset: number): string {
+    let result = '';
+    while (offset < dataView.byteLength) {
+      const char = String.fromCharCode(dataView.getUint8(offset));
+      if (char === '\n') break; 
+      result += char;
+      offset++;
+    }
+    return result;
+  }
+
+  private removeComments(line: string): string {
+    const commentIndex = line.indexOf('#');
+    return commentIndex === -1 ? line : line.substring(0, commentIndex).trim();
+  }
+
+  private readString(dataView: DataView, offset: number, length: number): string {
+    let result = '';
+    for (let i = 0; i < length; i++) {
+      result += String.fromCharCode(dataView.getUint8(offset + i));
+    }
+    return result;
   }
 
   private handleJPEGFile(file: File) {
@@ -138,19 +232,6 @@ export class FileHandler {
     }
     const cleanLine = line.split('#')[0].trim();
     return cleanLine.replace(/\s+/g, ' ');
-  }
-
-  private clearP6Line(dataView: DataView, offset: { value: number }, buffer: ArrayBuffer): void {
-    while (true) {
-      const char = dataView.getUint8(offset.value);
-      if (char === 35) {
-        while (dataView.getUint8(offset.value) !== 10 && offset.value < buffer.byteLength) {
-          offset.value++;
-        }
-      } else {
-        return;
-      }
-    }
   }
 
   private convertMaxVal(value: number, maxVal: number) {

@@ -55,9 +55,8 @@ saveJPEGButton.addEventListener('click', () => {
   const quality = parseInt(qualitySlider.value, 10) / 100;
 
   const imageElement = canvasHandler.getImage();
-  if (!imageElement) return; // Ensure there's an image to save
+  if (!imageElement) return;
   
-  // Use the original dimensions of the image
   const { width, height } = imageElement;
 
   const saveCanvas = document.createElement('canvas');
@@ -65,16 +64,14 @@ saveJPEGButton.addEventListener('click', () => {
   saveCanvas.height = height;
   const saveCtx = saveCanvas.getContext('2d') as CanvasRenderingContext2D;
 
-  // Draw the image using the image element directly
   saveCtx.drawImage(imageElement, 0, 0, width, height);
 
-  // Convert to blob and initiate download
   saveCanvas.toBlob((blob) => {
       if (blob) {
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = 'image.jpeg';
+          a.download = `${new Date().toISOString()}.jpeg`;
           a.click();
           URL.revokeObjectURL(url);
       }

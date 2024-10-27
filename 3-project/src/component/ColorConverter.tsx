@@ -20,8 +20,14 @@ export const ColorConverter = () => {
   }
 
   return (
-    <div>
-      <h2>RGB to CMYK Converter</h2>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+    >
       <div style={{ display: "flex", gap: "30px" }}>
         <div>
           <h3>RGB</h3>
@@ -74,7 +80,14 @@ export const ColorConverter = () => {
         </div>
       </div>
 
-      <div>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
         <h3>Color Preview</h3>
         <div
           style={{

@@ -1,13 +1,13 @@
 type Props = {
-  isRotating: boolean
-  setIsRotating: (value: boolean) => void
+  isVisible: boolean
+  setIsVisible: (value: boolean) => void
   clipPosition: number
   setClipPosition: (value: number) => void
 }
 
 export const Controls = ({
-  isRotating,
-  setIsRotating,
+  isVisible,
+  setIsVisible,
   clipPosition,
   setClipPosition,
 }: Props) => {
@@ -17,10 +17,10 @@ export const Controls = ({
         <label>
           <input
             type="checkbox"
-            checked={isRotating}
-            onChange={() => setIsRotating(!isRotating)}
+            checked={isVisible}
+            onChange={() => setIsVisible(!isVisible)}
           />
-          Rotate Cube
+          Show Cube
         </label>
       </div>
       <div>

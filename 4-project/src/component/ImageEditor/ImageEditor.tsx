@@ -100,6 +100,12 @@ export const ImageEditor = () => {
     }
   }
 
+  const handleClearFilter = () => {
+    if (canvasHandler) {
+      canvasHandler.clearFilter()
+    }
+  }
+
   const handleQualityChange = (event: Event, newValue: number | number[]) => {
     setQuality(newValue as number)
   }
@@ -308,6 +314,13 @@ export const ImageEditor = () => {
             sx={{ width: "100%" }}
           >
             Resize Fit
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleClearFilter}
+            sx={{ width: "100%" }}
+          >
+            Clear filter
           </Button>
         </Box>
         <Box

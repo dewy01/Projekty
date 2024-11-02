@@ -106,7 +106,7 @@ export const ImageEditor = () => {
     }
   }
 
-  const handleQualityChange = (event: Event, newValue: number | number[]) => {
+  const handleQualityChange = (_: Event, newValue: number | number[]) => {
     setQuality(newValue as number)
   }
 
@@ -365,7 +365,7 @@ export const ImageEditor = () => {
                     value={value}
                     min={0}
                     max={255}
-                    onChange={(e, val) =>
+                    onChange={(_, val) =>
                       handleSliderChange(index, val as number)
                     }
                     valueLabelDisplay="auto"
@@ -383,7 +383,7 @@ export const ImageEditor = () => {
                     value={value}
                     min={0}
                     max={255}
-                    onChange={(e, val) =>
+                    onChange={(_, val) =>
                       handleSliderChange(index, val as number)
                     }
                     valueLabelDisplay="auto"
@@ -401,7 +401,7 @@ export const ImageEditor = () => {
                     value={value}
                     min={0}
                     max={255}
-                    onChange={(e, val) =>
+                    onChange={(_, val) =>
                       handleSliderChange(index, val as number)
                     }
                     valueLabelDisplay="auto"
@@ -419,7 +419,7 @@ export const ImageEditor = () => {
                     value={value}
                     min={1}
                     max={255}
-                    onChange={(e, val) =>
+                    onChange={(_, val) =>
                       handleSliderChange(index, val as number)
                     }
                     valueLabelDisplay="auto"
@@ -435,7 +435,7 @@ export const ImageEditor = () => {
                   value={sliderValues[0]}
                   min={-255}
                   max={255}
-                  onChange={(e, val) => handleSliderChange(0, val as number)}
+                  onChange={(_, val) => handleSliderChange(0, val as number)}
                   valueLabelDisplay="auto"
                   aria-labelledby="brightness-slider"
                 />

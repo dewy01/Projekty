@@ -1,12 +1,13 @@
-import "./App.css"
-import { ImageEditor } from "./component/ImageEditor/ImageEditor"
+import React from "react";
+import { ImageEditor } from "./component/ImageEditor/ImageEditor";
+import { Container } from "@mui/material";
 
 function App() {
   return (
-    <div className="App">
+    <Container maxWidth="lg">
       <ImageEditor />
-    </div>
-  )
+    </Container>
+  );
 }
 
-export default App
+export default App;

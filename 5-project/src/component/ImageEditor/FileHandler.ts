@@ -18,12 +18,13 @@ export class FileHandler {
     }
   }
 
+
   private handleJPEGFile(file: File) {
     const reader = new FileReader();
     reader.onload = (event) => {
       const arrayBuffer = event.target?.result as ArrayBuffer;
       const decodedImage = jpeg.decode(arrayBuffer, { useTArray: true });
-
+      this.canvasHandler.clearCanvas();
       this.canvasHandler.drawJPEGImage(decodedImage.width, decodedImage.height, decodedImage.data);
     };
     reader.readAsArrayBuffer(file);

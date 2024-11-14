@@ -176,5 +176,153 @@ export class CanvasHandler {
         return this.canvas.toDataURL();
     }
 
+    applyHistogramStretch(): void {
+        if (!this.imageElement) return;
+      
+        const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+        const data = imageData.data;
+      
+        let minR = 255, maxR = 0;
+        let minG = 255, maxG = 0;
+        let minB = 255, maxB = 0;
+      
+        for (let i = 0; i < data.length; i += 4) {
+            minR = Math.min(minR, data[i]);
+            maxR = Math.max(maxR, data[i]);
+        
+            minG = Math.min(minG, data[i + 1]);
+            maxG = Math.max(maxG, data[i + 1]);
+        
+            minB = Math.min(minB, data[i + 2]);
+            maxB = Math.max(maxB, data[i + 2]);
+        }
+      
+        const rangeR = maxR - minR;
+        const rangeG = maxG - minG;
+        const rangeB = maxB - minB;
+      
+        if (rangeR === 0 || rangeG === 0 || rangeB === 0) return;
+      
+        for (let i = 0; i < data.length; i += 4) {
+            data[i] = ((data[i] - minR) / rangeR) * 255;
+            data[i + 1] = ((data[i + 1] - minG) / rangeG) * 255;
+            data[i + 2] = ((data[i + 2] - minB) / rangeB) * 255;
+        }
+      
+        this.ctx.putImageData(imageData, 0, 0);
+    }
+
+    applyHistogramEqualization(): void {
+        if (!this.imageElement) return;
+    
+        const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+        const data = imageData.data;
+    
+        const histRed = new Array(256).fill(0);
+        const histGreen = new Array(256).fill(0);
+        const histBlue = new Array(256).fill(0);
+    
+        for (let i = 0; i < data.length; i += 4) {
+            histRed[data[i]]++;
+            histGreen[data[i + 1]]++;
+            histBlue[data[i + 2]]++;
+        }
+    
+        const cdfRed = this.calculateCDF(histRed);
+        const cdfGreen = this.calculateCDF(histGreen);
+        const cdfBlue = this.calculateCDF(histBlue);
+    
+        const cdfMinRed = cdfRed.find(val => val > 0) || 0;
+        const cdfMinGreen = cdfGreen.find(val => val > 0) || 0;
+        const cdfMinBlue = cdfBlue.find(val => val > 0) || 0;
+    
+        for (let i = 0; i < data.length; i += 4) {
+            data[i] = this.equalizeValue(cdfRed[data[i]], cdfMinRed, data.length);
+            data[i + 1] = this.equalizeValue(cdfGreen[data[i + 1]], cdfMinGreen, data.length);
+            data[i + 2] = this.equalizeValue(cdfBlue[data[i + 2]], cdfMinBlue, data.length);
+        }
+    
+        this.ctx.putImageData(imageData, 0, 0);
+    }
+    
+    private calculateCDF(hist: number[]): number[] {
+        const cdf = [...hist];
+        for (let i = 1; i < cdf.length; i++) {
+            cdf[i] += cdf[i - 1];
+        }
+        return cdf;
+    }
+    
+    private equalizeValue(cdfValue: number, cdfMin: number, totalPixels: number): number {
+        return Math.round(((cdfValue - cdfMin) / (totalPixels - cdfMin)) * 255);
+    }    
+    
+
+applyManualThreshold(threshold: number): void {
+    const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+    const data = imageData.data;
+  
+    for (let i = 0; i < data.length; i += 4) {
+        const gray = 0.3 * data[i] + 0.59 * data[i + 1] + 0.11 * data[i + 2];
+        const value = gray > threshold ? 255 : 0;
+        data[i] = data[i + 1] = data[i + 2] = value;
+    }
+  
+    this.ctx.putImageData(imageData, 0, 0);
+}
+
+applyPercentBlack(percent: number): void {
+    const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+    const data = imageData.data;
+  
+    const hist = new Array(256).fill(0);
+    for (let i = 0; i < data.length; i += 4) {
+        const gray = 0.3 * data[i] + 0.59 * data[i + 1] + 0.11 * data[i + 2];
+        hist[Math.round(gray)]++;
+    }
+  
+    const totalPixels = data.length / 4;
+    let totalCount = totalPixels * (percent / 100); 
+  
+    let threshold = 0;
+    for (let i = 0; i < 256; i++) {
+        totalCount -= hist[i];
+        if (totalCount <= 0) {
+            threshold = i;
+            break;
+        }
+    }
+  
+    this.applyManualThreshold(threshold);
+}
+
+      applyIterativeSelection(): void {
+        const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+        const data = imageData.data;
+      
+        let threshold = 128, prevThreshold;
+        do {
+          prevThreshold = threshold;
+          let belowSum = 0, aboveSum = 0;
+          let belowCount = 0, aboveCount = 0;
+      
+          for (let i = 0; i < data.length; i += 4) {
+            const gray = 0.3 * data[i] + 0.59 * data[i + 1] + 0.11 * data[i + 2];
+            if (gray > threshold) {
+              aboveSum += gray;
+              aboveCount++;
+            } else {
+              belowSum += gray;
+              belowCount++;
+            }
+          }
+      
+          const belowMean = belowCount ? belowSum / belowCount : 0;
+          const aboveMean = aboveCount ? aboveSum / aboveCount : 0;
+          threshold = Math.round((belowMean + aboveMean) / 2);
+        } while (Math.abs(threshold - prevThreshold) > 1);
+      
+        this.applyManualThreshold(threshold);
+      }            
    
 }

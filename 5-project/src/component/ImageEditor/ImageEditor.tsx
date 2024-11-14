@@ -2,6 +2,10 @@ import {
   AppBar,
   Box,
   Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   InputLabel,
   Slider,
   Toolbar,
@@ -15,7 +19,13 @@ export const ImageEditor = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [canvasHandler, setCanvasHandler] = useState<CanvasHandler | null>(null)
   const [fileHandler, setFileHandler] = useState<FileHandler | null>(null)
+  const [fileKey, setFileKey] = useState(0)
   const [quality, setQuality] = useState(90)
+  const [dialog, setDialog] = useState<"histogram" | "binarization" | null>(
+    null
+  )
+  const [threshold, setThreshold] = useState<number>(128)
+  const [percentThreshold, setPercentThreshold] = useState<number>(30)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -32,6 +42,7 @@ export const ImageEditor = () => {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file && fileHandler) {
+      setFileKey((prevKey) => prevKey + 1)
       fileHandler.handleFile(file)
     }
   }
@@ -62,6 +73,13 @@ export const ImageEditor = () => {
     canvasHandler?.resizeImageToFitCanvas()
   }
 
+  const handleBinarization = () => {
+    if (canvasHandler) {
+      canvasHandler?.applyManualThreshold(threshold)
+      setDialog(null)
+    }
+  }
+
   return (
     <Box
       display="flex"
@@ -75,7 +93,23 @@ export const ImageEditor = () => {
       }}
     >
       <AppBar position="static">
-        <Toolbar></Toolbar>
+        <Toolbar>
+          <Button
+            color="info"
+            variant="contained"
+            onClick={() => setDialog("histogram")}
+            sx={{ marginRight: 2 }}
+          >
+            Histogram
+          </Button>
+          <Button
+            color="info"
+            variant="contained"
+            onClick={() => setDialog("binarization")}
+          >
+            Binarization
+          </Button>
+        </Toolbar>
       </AppBar>
       <Box display="flex">
         <Box
@@ -95,6 +129,7 @@ export const ImageEditor = () => {
             Import file
           </InputLabel>
           <input
+            key={fileKey}
             type="file"
             id="file-input"
             accept=".ppm,.jpeg,.jpg"
@@ -169,6 +204,99 @@ export const ImageEditor = () => {
           </Box>
         </Box>
       </Box>
+      {dialog === "histogram" && (
+        <Dialog open={true} onClose={() => setDialog(null)}>
+          <DialogTitle>Histogram</DialogTitle>
+          <DialogContent>
+            <Typography>Select an option:</Typography>
+            <Box gap={4} display={"flex"}>
+              <Button
+                variant="contained"
+                onClick={() => {
+                  canvasHandler?.applyHistogramStretch()
+                  setDialog(null)
+                }}
+                sx={{ marginY: 1 }}
+              >
+                Histogram Stretching
+              </Button>
+              <Button
+                variant="contained"
+                onClick={() => {
+                  canvasHandler?.applyHistogramEqualization()
+                  setDialog(null)
+                }}
+              >
+                Histogram Equalization
+              </Button>
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDialog(null)}>Close</Button>
+          </DialogActions>
+        </Dialog>
+      )}
+      {dialog === "binarization" && (
+        <Dialog open={true} onClose={() => setDialog(null)}>
+          <DialogTitle>Binarization</DialogTitle>
+          <DialogContent>
+            <Typography>Manual threshold setting:</Typography>
+            <Typography sx={{ color: "white" }}>
+              Threshold value: {threshold}
+            </Typography>
+            <Slider
+              value={threshold}
+              min={0}
+              max={255}
+              step={1}
+              onChange={(_, value) => setThreshold(value as number)}
+              sx={{ marginY: 2 }}
+            />
+            <Typography sx={{ color: "white" }}>
+              Percent threshold: {percentThreshold}%
+            </Typography>
+            <Slider
+              value={percentThreshold}
+              min={0}
+              max={100}
+              step={1}
+              onChange={(_, value) => setPercentThreshold(value as number)}
+              sx={{ marginY: 2 }}
+            />
+            <Box gap={4} display={"flex"}>
+              <Button
+                variant="contained"
+                onClick={handleBinarization}
+                sx={{ marginY: 1 }}
+              >
+                Set threshold ({threshold})
+              </Button>
+              <Button
+                variant="contained"
+                onClick={() => {
+                  canvasHandler?.applyPercentBlack(percentThreshold)
+                  setDialog(null)
+                }}
+                sx={{ marginY: 1 }}
+              >
+                Percent Black Selection ({percentThreshold}%)
+              </Button>
+              <Button
+                variant="contained"
+                onClick={() => {
+                  canvasHandler?.applyIterativeSelection()
+                  setDialog(null)
+                }}
+              >
+                Mean Iterative Selection
+              </Button>
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDialog(null)}>Close</Button>
+          </DialogActions>
+        </Dialog>
+      )}
     </Box>
   )
 }

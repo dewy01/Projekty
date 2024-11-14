@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/component/imageeditor/canvashandler.ts","./src/component/imageeditor/filehandler.ts","./src/component/imageeditor/imageeditor.tsx"],"version":"5.6.3"}

@@ -10,7 +10,7 @@ interface CanvasProps {
   shapes: Shape[]
   addPoint: (point: Point) => void
   setShapeIndex: (index: number) => void
-  moveShape: (dx: number, dy: number) => void
+  moveShape: (shapeIndex: number, dx: number, dy: number) => void
   clearShapeIndex: () => void
   selectedShapeIndex: number | null
   rotateShape: (shapeIndex: number, angle: number, center: Point) => void
@@ -43,7 +43,7 @@ const Canvas: React.FC<CanvasProps> = ({
   }
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (["move", "transform", "rotate", "scale"].includes(mode)) {
+    if (["move", "rotate", "scale"].includes(mode)) {
       const canvas = e.currentTarget
       const rect = canvas.getBoundingClientRect()
       const x = e.clientX - rect.left
@@ -76,7 +76,7 @@ const Canvas: React.FC<CanvasProps> = ({
       const dy = y - lastMousePos.y
 
       if (mode === "move") {
-        moveShape(dx, dy)
+        moveShape(selectedShapeIndex, dx, dy)
       } else if (mode === "rotate") {
         const center = calculateShapeCenter(shapes[selectedShapeIndex])
         const angle =
@@ -99,10 +99,14 @@ const Canvas: React.FC<CanvasProps> = ({
   }
 
   const handleMouseUp = () => {
-    if (["move", "transform", "rotate", "scale"].includes(mode)) {
+    if (["move", "rotate", "scale"].includes(mode)) {
       setIsDragging(false)
-      clearShapeIndex()
+      //clearShapeIndex()
     }
+  }
+
+  const isShapeSelected = (index: number): boolean => {
+    return selectedShapeIndex === index
   }
 
   return (
@@ -151,8 +155,12 @@ const Canvas: React.FC<CanvasProps> = ({
         >
           <polygon
             points={shape.points.map((p) => `${p.x},${p.y}`).join(" ")}
-            fill="rgba(0, 0, 255, 0.3)"
-            stroke="blue"
+            fill={
+              isShapeSelected(index)
+                ? "rgba(255, 0, 0, 0.5)"
+                : "rgba(0, 0, 255, 0.3)"
+            }
+            stroke={isShapeSelected(index) ? "red" : "blue"}
             strokeWidth={2}
           />
         </svg>

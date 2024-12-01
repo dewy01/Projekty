@@ -39,11 +39,11 @@ export const useShapes = () => {
     setSelectedShapeIndex(index);
   };
 
-  const moveShape = (dx: number, dy: number) => {
-    if (selectedShapeIndex !== null) {
+  const moveShape = (shapeIndex: number,dx: number, dy: number) => {
+    if (shapeIndex !== null) {
       setShapes((prev) =>
         prev.map((shape, index) =>
-          index === selectedShapeIndex
+          index === shapeIndex
             ? {
                 ...shape,
                 points: shape.points.map((p) => ({
@@ -99,6 +99,29 @@ export const useShapes = () => {
       )
     );
   };
+
+  const saveShapesToFile = () => {
+    const blob = new Blob([JSON.stringify(shapes)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "shapes.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const shapesJson = reader.result as string;
+        const loadedShapes = JSON.parse(shapesJson);
+        setShapes(loadedShapes);
+      };
+      reader.readAsText(file);
+    }
+  };
   
 
   return {
@@ -113,6 +136,8 @@ export const useShapes = () => {
     moveShape,
     clearShapeIndex,
     rotateShape,
-    scaleShape  
+    scaleShape,
+    saveShapesToFile,
+    handleFileUpload
   };
 };

@@ -17,6 +17,7 @@ export const ImageEditor = () => {
   const [canvasHandler, setCanvasHandler] = useState<CanvasHandler | null>(null)
   const [fileHandler, setFileHandler] = useState<FileHandler | null>(null)
   const [hitOrMissDialogOpen, setHitOrMissDialogOpen] = useState(false)
+  const [greenPercentage, setGreenPercentage] = useState(0)
   const [fileKey, setFileKey] = useState(0)
   const [quality, setQuality] = useState(90)
 
@@ -71,6 +72,13 @@ export const ImageEditor = () => {
     setHitOrMissDialogOpen(false)
   }
 
+  const handleRenderGreenAreas = () => {
+    if (canvasHandler) {
+      const percentage = canvasHandler.renderGreenAreas()
+      setGreenPercentage(percentage)
+    }
+  }
+
   return (
     <Box
       display="flex"
@@ -114,6 +122,9 @@ export const ImageEditor = () => {
             onClick={() => setHitOrMissDialogOpen(true)}
           >
             Hit-or-Miss
+          </Button>
+          <Button variant="contained" onClick={handleRenderGreenAreas}>
+            Render Green Areas
           </Button>
         </Toolbar>
       </AppBar>
@@ -181,6 +192,9 @@ export const ImageEditor = () => {
           >
             Resize Fit
           </Button>
+          <Typography sx={{ color: "white" }}>
+            Green Area Percentage: {greenPercentage.toFixed(2)}%
+          </Typography>
         </Box>
         <Box
           flexGrow={1}

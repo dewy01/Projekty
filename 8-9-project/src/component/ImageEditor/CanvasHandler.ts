@@ -311,8 +311,33 @@ export class CanvasHandler {
             }
           }
         }
-        
+
         this.ctx.putImageData(newImageData, 0, 0);
       }
+
+      public renderGreenAreas() {
+        const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+        const data = imageData.data;
+        const greenPixelData: number[] = [];
+    
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];    
+          const g = data[i + 1]; 
+          const b = data[i + 2]; 
+    
+          const threshold = 25;
+          if (g > r + threshold && g > b + threshold) {
+            greenPixelData.push(i);
+          } else {
+            data[i + 3] = 0; 
+          }
+        }
+    
+        this.ctx.putImageData(imageData, 0, 0);
+    
+        return greenPixelData.length / (data.length / 4) * 100;
+      }
+      
+
       
 }

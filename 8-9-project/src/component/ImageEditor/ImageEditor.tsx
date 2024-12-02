@@ -10,11 +10,13 @@ import {
 import React, { useEffect, useRef, useState } from "react"
 import { CanvasHandler } from "./CanvasHandler"
 import { FileHandler } from "./FileHandler"
+import { HitOrMissDialog } from "./HitOrMissDialog"
 
 export const ImageEditor = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [canvasHandler, setCanvasHandler] = useState<CanvasHandler | null>(null)
   const [fileHandler, setFileHandler] = useState<FileHandler | null>(null)
+  const [hitOrMissDialogOpen, setHitOrMissDialogOpen] = useState(false)
   const [fileKey, setFileKey] = useState(0)
   const [quality, setQuality] = useState(90)
 
@@ -64,6 +66,11 @@ export const ImageEditor = () => {
     canvasHandler?.resizeImageToFitCanvas()
   }
 
+  const handleHitOrMissApply = (structuringElement: (boolean | null)[][]) => {
+    canvasHandler?.applyHitOrMiss(structuringElement)
+    setHitOrMissDialogOpen(false)
+  }
+
   return (
     <Box
       display="flex"
@@ -77,7 +84,38 @@ export const ImageEditor = () => {
       }}
     >
       <AppBar position="static">
-        <Toolbar></Toolbar>
+        <Toolbar>
+          <Button
+            variant="contained"
+            onClick={() => canvasHandler?.applyDilation()}
+          >
+            Dilation
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => canvasHandler?.applyErosion()}
+          >
+            Erosion
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => canvasHandler?.applyOpening()}
+          >
+            Opening
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => canvasHandler?.applyClosing()}
+          >
+            Closing
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => setHitOrMissDialogOpen(true)}
+          >
+            Hit-or-Miss
+          </Button>
+        </Toolbar>
       </AppBar>
       <Box display="flex">
         <Box
@@ -172,6 +210,11 @@ export const ImageEditor = () => {
           </Box>
         </Box>
       </Box>
+      <HitOrMissDialog
+        open={hitOrMissDialogOpen}
+        onClose={() => setHitOrMissDialogOpen(false)}
+        onApply={handleHitOrMissApply}
+      />
     </Box>
   )
 }
